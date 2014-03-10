@@ -22,7 +22,7 @@ begin
     rescue LoadError
       Oboe.loaded = false
 
-      unless $ENV['RAILS_GROUP'] == 'assets'
+      unless ENV['RAILS_GROUP'] == 'assets'
         $stderr.puts "=============================================================="
         $stderr.puts "Missing TraceView libraries.  Tracing disabled."
         $stderr.puts "See: https://support.tv.appneta.com/solution/articles/137973" 
@@ -38,8 +38,11 @@ begin
   require 'oboe/ruby'
 
   # Frameworks
-  require 'oboe/frameworks/rails' if defined?(::Rails) and Oboe.loaded
-
+  if Oboe.loaded
+    require 'oboe/frameworks/rails'   if defined?(::Rails)
+    require 'oboe/frameworks/sinatra' if defined?(::Sinatra)
+    require 'oboe/frameworks/padrino' if defined?(::Padrino)
+  end
 rescue Exception => e
   $stderr.puts "[oboe/error] Problem loading: #{e.inspect}"
   $stderr.puts e.backtrace

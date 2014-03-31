@@ -1,3 +1,24 @@
+
+# oboe 2.6.2.0 (03/24/14)
+
+* This patch release improves webserver detection on Heroku and adds in some c extension protections.  A oboe-heroku gem release will follow this release.
+
+# oboe 2.6.1.0 (03/12/14)
+
+This is a patch release to address "Unsupported digest algorithm (SHA256)" occurring under certain cases on Heroku. A oboe-heroku gem release will follow this release.
+
+* Support delayed Reporter Initialization for Forking Webservers
+* README syntax fixes
+
+# oboe 2.5.0.7 (02/13/14)
+
+* Added new Redis redis-rb gem (>= 3.0.0) instrumentation
+* Fix a SampleSource bitmask high bit issue
+* Expanded __Init reports
+* Fix Ruby standalone returning nil X-Trace headers (1B000000...)
+* Test against Ruby 2.1.0 on TravisCI
+* Fix errant Oboe::Config warning
+
 # oboe 2.4.0.1 (01/12/13)
 
 * Report SampleRate & SampleSource per updated SWIG API

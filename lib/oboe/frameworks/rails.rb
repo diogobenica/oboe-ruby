@@ -4,7 +4,7 @@
 module Oboe
   module Rails
     module Helpers
-      extend ActiveSupport::Concern if ::Rails::VERSION::MAJOR > 2
+      extend ActiveSupport::Concern if defined?(::Rails) and ::Rails::VERSION::MAJOR > 2
 
       @@rum_xhr_tmpl = File.read(File.dirname(__FILE__) + '/rails/helpers/rum/rum_ajax_header.js.erb')
       @@rum_hdr_tmpl = File.read(File.dirname(__FILE__) + '/rails/helpers/rum/rum_header.js.erb')
@@ -106,16 +106,20 @@ if defined?(::Rails)
         end
 
         config.after_initialize do
-          Oboe::Loading.setup_logger
+          Oboe.logger = ::Rails.logger if ::Rails.logger
+
           Oboe::Loading.load_access_key
           Oboe::Inst.load_instrumentation
           Oboe::Rails.load_instrumentation
-          Oboe::API.report_init('rack') unless ["development", "test"].include? ENV['RACK_ENV']
+
+          # Report __Init after fork when in Heroku
+          Oboe::API.report_init unless Oboe.heroku?
         end
       end
     end
   else
-    Oboe::Loading.setup_logger
+    Oboe.logger = ::Rails.logger if ::Rails.logger
+
     Oboe::Rails.load_initializer
     Oboe::Loading.load_access_key
     
@@ -126,7 +130,9 @@ if defined?(::Rails)
       Oboe::Inst.load_instrumentation
       Oboe::Rails.load_instrumentation
       Oboe::Rails.include_helpers
-      Oboe::API.report_init('rack') unless ["development", "test"].include? ENV['RACK_ENV']
+      
+      # Report __Init after fork when in Heroku
+      Oboe::API.report_init unless Oboe.heroku?
     end
   end
 end

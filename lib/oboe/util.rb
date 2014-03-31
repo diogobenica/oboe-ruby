@@ -25,12 +25,20 @@ module Oboe
         if cls.method_defined? method.to_sym or cls.private_method_defined? method.to_sym
           
           # Strip '!' or '?' from method if present
-          safe_method_name = method.to_s.chop if method =~ /\?$|\!$/
+          safe_method_name = method.to_s.chop if method.to_s =~ /\?$|\!$/
           safe_method_name ||= method
 
-          cls.class_eval do
-            alias_method "#{safe_method_name}_without_oboe", "#{method}"
-            alias_method "#{method}", "#{safe_method_name}_with_oboe"
+          without_oboe = "#{safe_method_name}_without_oboe"
+          with_oboe    = "#{safe_method_name}_with_oboe"
+       
+          # Only alias if we haven't done so already
+          unless cls.method_defined? without_oboe.to_sym or 
+            cls.private_method_defined? without_oboe.to_sym
+
+            cls.class_eval do
+              alias_method without_oboe, "#{method}"
+              alias_method "#{method}", with_oboe
+            end
           end
         else Oboe.logger.warn "[oboe/loading] Couldn't properly instrument #{name}.  Partial traces may occur."
         end

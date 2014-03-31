@@ -37,12 +37,6 @@ module Oboe
   # instrumented libraries are already loaded...
   #
   module Loading
-    def self.setup_logger
-      if defined?(::Rails) and ::Rails.logger
-        Oboe.logger = ::Rails.logger
-      end
-    end
-
     ##
     # Load the TraceView access key (either from system configuration file
     # or environment variable) and calculate internal RUM ID
@@ -55,7 +49,7 @@ module Oboe
           Oboe::Config[:rum_id] = Oboe::Util::Base64URL.encode(Digest::SHA1.digest("RUM" + Oboe::Config[:access_key]))
         else
           # ..else read from system-wide configuration file
-          unless Oboe::Config.access_key
+          if Oboe::Config.access_key.empty?
             config_file = '/etc/tracelytics.conf'
             return unless File.exists?(config_file)
             
@@ -90,25 +84,15 @@ module Oboe
         Oboe.logger.fatal "[oboe/error] Couldn't load oboe api."
       end
     end
-
-    ## 
-    # Load instrumentation for the various frameworks located in
-    # lib/oboe/frameworks/*/*.rb
-    # 
-    def self.load_framework_instrumentation
-      pattern = File.join(File.dirname(__FILE__), 'frameworks/*/', '*.rb')
-      Dir.glob(pattern) do |f|
-        begin
-          require f
-        rescue => e
-          Oboe.logger.error "[oboe/loading] Error loading framework file '#{f}' : #{e}"
-        end
-      end
-    end
   end
 end
 
 Oboe::Loading.require_api
-Oboe::Loading.load_framework_instrumentation
-Oboe::Reporter.start
+
+# Auto-start the Reporter unless we running Unicorn on Heroku
+# In that case, we start the reporters after fork
+unless Oboe.heroku? and Oboe.forking_webserver?
+  Oboe.logger.debug "[oboe/debug] starting Reporter from oboe gem"
+  Oboe::Reporter.start
+end
 

@@ -3,9 +3,6 @@ require 'rack/test'
 require 'rack/lobster'
 require 'oboe/inst/rack'
 
-Oboe::Config[:tracing_mode] = 'always'
-Oboe::Config[:sample_rate] = 1e6
-    
 class RackTestApp < Minitest::Test
   include Rack::Test::Methods
 

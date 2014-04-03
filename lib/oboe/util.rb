@@ -65,6 +65,7 @@ module Oboe
         return (path =~ /\.(jpg|jpeg|gif|png|ico|css|zip|tgz|gz|rar|bz2|pdf|txt|tar|wav|bmp|rtf|js|flv|swf|ttf|woff|svg|less)$/i)
       end
 
+      ##
       # prettify
       #
       # Even to my surprise, 'prettify' is a real word:

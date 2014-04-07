@@ -5,7 +5,7 @@ module Oboe
   module Util
     class << self
       ##
-      # oboe_alias
+      # method_alias
       #
       # Centralized utility method to alias a method on an arbitrary
       # class or module.
@@ -45,7 +45,7 @@ module Oboe
       end
   
       ##
-      # oboe_send_include
+      # send_include
       #
       # Centralized utility method to send a include call for an
       # arbitrary class
@@ -54,6 +54,33 @@ module Oboe
           target_cls.send(:include, cls)
         end
       end
+
+      ##
+      # static_asset?
+      #
+      # Given a path, this method determines whether it is a static asset or not (based
+      # solely on filename)
+      #
+      def static_asset?(path)
+        return (path =~ /\.(jpg|jpeg|gif|png|ico|css|zip|tgz|gz|rar|bz2|pdf|txt|tar|wav|bmp|rtf|js|flv|swf|ttf|woff|svg|less)$/i)
+      end
+
+      ##
+      # prettify
+      #
+      # Even to my surprise, 'prettify' is a real word:
+      # transitive v. To make pretty or prettier, especially in a superficial or insubstantial way.
+      #   from The American Heritage® Dictionary of the English Language, 4th Edition
+      #
+      # This method makes things 'purty' for reporting.
+      def prettify(x)
+        if (x.to_s =~ /^#</) == 0
+          x.class.to_s
+        else
+          x.to_s
+        end
+      end
+
     end
   end
 end

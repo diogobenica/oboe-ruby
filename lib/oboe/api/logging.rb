@@ -60,7 +60,7 @@ module Oboe
       #
       # Returns nothing.
       def log_start(layer, xtrace, opts={})
-        return if Oboe.never?
+        return if Oboe.never? or (opts.has_key?(:URL) and ::Oboe::Util.static_asset?(opts[:URL]))
   
         if xtrace
           Oboe::Context.fromString(xtrace)
@@ -68,7 +68,7 @@ module Oboe
   
         if Oboe.tracing?
           log_entry(layer, opts)
-        elsif Oboe.sample?(opts.merge(:layer => layer, :xtrace => xtrace)) or opts.has_key?('Force')
+        elsif Oboe.always? and (Oboe.sample?(opts.merge(:layer => layer, :xtrace => xtrace)) or opts.has_key?('Force'))
           log_event(layer, 'entry', Oboe::Context.startTrace, opts)
         end
       end

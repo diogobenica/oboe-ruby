@@ -6,7 +6,7 @@ require 'oboe/inst/rack'
 Oboe::Config[:tracing_mode] = 'always'
 Oboe::Config[:sample_rate] = 1e6
     
-class RackTestApp < MiniTest::Unit::TestCase
+class RackTestApp < Minitest::Test
   include Rack::Test::Methods
 
   def app
@@ -34,7 +34,7 @@ class RackTestApp < MiniTest::Unit::TestCase
     kvs = {} 
     kvs["SampleRate"] = "1000000"
     kvs["SampleSource"] = OBOE_SAMPLE_RATE_SOURCE_FILE.to_s
-    validate_event_keys(traces[1], kvs)
+    validate_event_keys(traces[0], kvs)
 
   end
 end

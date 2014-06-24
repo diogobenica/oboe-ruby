@@ -5,7 +5,7 @@ The oboe gem provides AppNeta [TraceView](http://www.appneta.com/application-per
 
 ![Ruby TraceView](https://s3.amazonaws.com/pglombardo/oboe-ruby-header.png)
 
-It has the ability to report performance metrics on an array of libraries, databases and frameworks such as Rails, Mongo, Memcache, ActiveRecord, Cassandra, Rack, Resque [and more](https://support.tv.appneta.com/support/solutions/articles/86388-ruby-instrumentation-support-matrix).
+It has the ability to report performance metrics on an array of libraries, databases and frameworks such as Rails, Mongo, Memcache, ActiveRecord, Cassandra, Rack, Resque [and more](https://support.appneta.com/cloud/ruby-instrumentation-release-notes)
 
 It requires a [TraceView](http://www.appneta.com/products/traceview/) account to view metrics.  Get yours, [it's free](http://www.appneta.com/products/traceview-free-account/).
 
@@ -17,11 +17,15 @@ It requires a [TraceView](http://www.appneta.com/products/traceview/) account to
 
 The oboe gem is [available on Rubygems](https://rubygems.org/gems/oboe) and can be installed with:
 
-    gem install oboe
+```bash
+gem install oboe
+```
 
 or added to your bundle Gemfile and running `bundle install`:
 
-    gem 'oboe'
+```ruby
+gem 'oboe'
+```
 
 # Running
 
@@ -29,24 +33,80 @@ or added to your bundle Gemfile and running `bundle install`:
 
 No special steps are needed to instrument Ruby on Rails.  Once part of the bundle, the oboe gem will automatically detect Rails and instrument on stack initialization.
 
-_Note: You will still need to decide on your `tracing_mode` depending on whether you are running with an instrumented Apache or nginx in front of your Rails stack.  See below for more details._
+*Note: You will still need to decide on your `tracing_mode` depending on whether you are running with an instrumented Apache or nginx in front of your Rails stack.  See below for more details.*
 
 ### The Install Generator
 
-The oboe gem provides a Rails generator used to seed an oboe initializer where you can configure and control `tracing_mode`, `sample_rate` and [other options](https://support.tv.appneta.com/support/solutions/articles/86392-configuring-the-ruby-instrumentation).
+The oboe gem provides a Rails generator used to seed an oboe initializer where you can configure and control `tracing_mode`, `sample_rate` and [other options](https://support.appneta.com/cloud/configuring-ruby-instrumentation)
 
 To run the install generator run:
 
-    bundle exec rails generate oboe:install
+```bash
+bundle exec rails generate oboe:install
+```
 
 After the prompts, this will create an initializer: `config/initializers/oboe.rb`.
 
-## Sinatra/Padrino
+## Sinatra
 
-You can instrument your Sinatra or Padrino application by adding the following code to your `config.ru` Rackup file (Padrino example).
+You can instrument your Sinatra application by adding the following code to your `config.ru` Rackup file:
 
+```ruby
+# If you're not using Bundler.require.  Make sure this is done
+# after the Sinatra require directive.
+require 'oboe'
+
+# When traces should be initiated for incoming requests. Valid options are
+# "always", "through" (when the request is initiated with a tracing header
+# from upstream) and "never". You must set this directive to "always" in
+# order to initiate tracing.
+Oboe::Config[:tracing_mode] = 'through'
+
+# You can remove the following line in production to allow for
+# auto sampling or managing the sample rate through the TraceView portal.
+# Oboe::Config[:sample_rate] = 1000000
+
+# You may want to replace the Oboe.logger with whichever logger you are using
+# Oboe.logger = Sinatra.logger
+```
+
+Note: If you're on Heroku, you don't need to set `tracing_mode` or `sample_rate` - they will be automatically configured.
+
+Make sure that the oboe gem is loaded _after_ Sinatra either by listing `gem 'oboe'` after Sinatra in your Gemfile or calling the `require 'oboe'` directive after Sinatra is loaded.
+
+With this, the oboe gem will automatically detect Sinatra on boot and instrument key components.
+
+## Padrino
+
+As long as the oboe gem is in your `Gemfile` (inserted after the `gem 'padrino'` directive) and you are calling `Bundler.require`, the oboe gem will automatically instrument Padrino applications.
+
+If you need to set `Oboe::Config` values on stack boot, you can do so by adding the following
+to your `config/boot.rb` file:
+
+```ruby
+Padrino.before_load do
+  # When traces should be initiated for incoming requests. Valid options are
+  # "always", "through" (when the request is initiated with a tracing header
+  # from upstream) and "never". You must set this directive to "always" in
+  # order to initiate tracing.
+  Oboe::Config[:tracing_mode] = 'always'
+
+  # You can remove the following line in production to allow for
+  # auto sampling or managing the sample rate through the TraceView portal.
+  Oboe::Config[:sample_rate] = 1e6
+end
+```
+
+Note: If you're on Heroku, you don't need to set `tracing_mode` or `sample_rate` - they will be automatically configured.
+
+## Grape
+
+You can instrument your Grape application by adding the following code to your `config.ru` Rackup file:
+
+```ruby
+    # If you're not using Bundler.require.  Make sure this is done
+    # after the Grape require directive.
     require 'oboe'
-    require 'oboe/inst/rack'
     
     # When traces should be initiated for incoming requests. Valid options are
     # "always", "through" (when the request is initiated with a tracing header 
@@ -58,38 +118,45 @@ You can instrument your Sinatra or Padrino application by adding the following c
     # auto sampling or managing the sample rate through the TraceView portal.
     # Oboe::Config[:sample_rate] = 1000000
     
-    # You may want to replace the Oboe.logger with your own
-    Oboe.logger = Padrino.logger
-    
-    Oboe::Ruby.initialize
-    Padrino.use Oboe::Rack
+    ...
 
-_In a future release, much of this will be automated._
+    class App < Grape::API
+      use Oboe::Rack
+    end
+```
+
+Note: If you're on Heroku, you don't need to set `tracing_mode` or `sample_rate` - they will be automatically configured.
+
+Make sure that the oboe gem is loaded _after_ Grape either by listing `gem 'oboe'` after Grape in your Gemfile or calling the `require 'oboe'` directive after Grape is loaded.
+
+You must explicitly tell your Grape application to use Oboe::Rack for tracing to occur.
 
 ## Custom Ruby Scripts & Applications
 
 The oboe gem has the ability to instrument any arbitrary Ruby application or script as long as the gem is initialized with the manual methods:
 
-    require 'rubygems'
-    require 'bundler'
-    
-    Bundler.require
-    
-    require 'oboe'
+```ruby
+require 'rubygems'
+require 'bundler'
 
-    # Tracing mode can be 'never', 'through' (to follow upstream) or 'always'
-    Oboe::Config[:tracing_mode] = 'always'
+Bundler.require
 
-    # Number of requests to trace out of each million
-    Oboe::Config[:sample_rate] = 1000000
+require 'oboe'
 
-    Oboe::Ruby.initialize
+# Tracing mode can be 'never', 'through' (to follow upstream) or 'always'
+Oboe::Config[:tracing_mode] = 'always'
+
+# Number of requests to trace out of each million
+Oboe::Config[:sample_rate] = 1000000
+
+Oboe::Ruby.initialize
+```
 
 From here, you can use the Tracing API to instrument areas of code using `Oboe::API.start_trace` (see below).  If you prefer to instead dive directly into code, take a look at [this example](https://gist.github.com/pglombardo/8550713) of an instrumented Ruby script.
 
 ## Other
 
-You can send deploy notifications to TraceView and have the events show up on your dashboard.  See: [Capistrano Deploy Notifications with tlog](https://support.tv.appneta.com/support/solutions/articles/86389-capistrano-deploy-notifications-with-tlog).
+You can send deploy notifications to TraceView and have the events show up on your dashboard.  See: [Capistrano Deploy Notifications with tlog](https://support.appneta.com/cloud/capistrano-deploy-notifications-tlog)
 
 # Custom Tracing
 
@@ -97,20 +164,22 @@ You can send deploy notifications to TraceView and have the events show up on yo
 
 You can instrument any arbitrary block of code using `Oboe::API.trace`:
 
-    # layer_name will show up in the TraceView app dashboard
-    layer_name = 'subsystemX'
+```ruby
+# layer_name will show up in the TraceView app dashboard
+layer_name = 'subsystemX'
 
-    # report_kvs are a set of information Key/Value pairs that are sent to
-    # TraceView dashboard along with the performance metrics.  These KV 
-    # pairs are used to report request, environment and/or client specific
-    # information.
+# report_kvs are a set of information Key/Value pairs that are sent to
+# TraceView dashboard along with the performance metrics.  These KV
+# pairs are used to report request, environment and/or client specific
+# information.
 
-    report_kvs = {}
-    report_kvs[:mykey] = @client.id
+report_kvs = {}
+report_kvs[:mykey] = @client.id
 
-    Oboe::API.trace(layer_name, report_kvs) do
-      # the block of code to be traced
-    end
+Oboe::API.trace(layer_name, report_kvs) do
+  # the block of code to be traced
+end
+```
 
 `Oboe::API.trace` is used within the context of a request.  It will follow the upstream state of the request being traced.  i.e. the block of code will only be traced when the parent request is being traced.
 
@@ -126,25 +195,27 @@ By using class level declarations, it's possible to automatically have certain m
 
 The pattern for Method Profiling is as follows:
 
-    # 'profile_name' is similar to a layer name.  
-    # It identifies this custom trace in your dashboard.
-    # 
-    class Engine
-        include OboeMethodProfiling
+```ruby
+# 'profile_name' is similar to a layer name.
+# It identifies this custom trace in your dashboard.
+#
+class Engine
+    include OboeMethodProfiling
 
-        def processor()
-            # body of method
-        end
-
-        # call syntax: profile_method <method>, <profile_name>
-        profile_method :processor, 'processor' 
+    def processor()
+        # body of method
     end
 
-This example demonstrates method profiling of instance methods.  Class methods are profiled slightly differently.  See the TraceView [documentation portal](https://support.tv.appneta.com/support/solutions/articles/86395-ruby-instrumentation-public-api) for full details.
+    # call syntax: profile_method <method>, <profile_name>
+    profile_method :processor, 'processor'
+end
+```
+
+This example demonstrates method profiling of instance methods.  Class methods are profiled slightly differently.  See the TraceView [documentation portal](https://support.appneta.com/cloud/ruby-custom) for full details.
 
 # Support
 
-If you find a bug or would like to request an enhancement, feel free to file an issue.  For all other support requests, see our [support portal](https://support.tv.appneta.com/) or on IRC @ #appneta on [Freenode](http://freenode.net/).
+If you find a bug or would like to request an enhancement, feel free to file an issue.  For all other support requests, see our [support portal](https://support.appneta.com/cloud) or on IRC @ #appneta on [Freenode](http://freenode.net/).
 
 # Contributing
 
@@ -179,7 +250,9 @@ The oboe gem uses a standard gem layout.  Here are the notable directories.
 
 The oboe gem is built with the standard `gem build` command passing in the gemspec:
 
-    gem build oboe.gemspec
+```bash
+gem build oboe.gemspec
+```
 
 ## Writing Custom Instrumentation
 
@@ -191,50 +264,54 @@ The Dalli gem nicely routes all memcache operations through a single `perform` o
 
 First, we define a module (Oboe::Inst::Dalli) and our own custom `perform_with_oboe` method that we will use as a wrapper around Dalli's `perform` method.  We also declare an `included` method which automatically gets called when this module is included by another.  See ['included' Ruby reference documentation](http://apidock.com/ruby/Module/included).
 
-    module Oboe
-      module Inst
-        module Dalli
-          include Oboe::API::Memcache
+```ruby
+module Oboe
+  module Inst
+    module Dalli
+      include Oboe::API::Memcache
 
-          def self.included(cls)
-            cls.class_eval do
-              if ::Dalli::Client.private_method_defined? :perform
-                alias perform_without_oboe perform
-                alias perform perform_with_oboe
-              end
-            end
-          end
-          
-          def perform_with_oboe(*all_args, &blk)
-            op, key, *args = *all_args
-
-            if Oboe.tracing?
-              opts = {}
-              opts[:KVOp] = op
-              opts[:KVKey] = key
-
-              Oboe::API.trace('memcache', opts || {}) do
-                result = perform_without_oboe(*all_args, &blk)
-                if op == :get and key.class == String
-                    Oboe::API.log('memcache', 'info', { :KVHit => memcache_hit?(result) })
-                end
-                result
-              end
-            else
-              perform_without_oboe(*all_args, &blk)
-            end
+      def self.included(cls)
+        cls.class_eval do
+          if ::Dalli::Client.private_method_defined? :perform
+            alias perform_without_oboe perform
+            alias perform perform_with_oboe
           end
         end
       end
+
+      def perform_with_oboe(*all_args, &blk)
+        op, key, *args = *all_args
+
+        if Oboe.tracing?
+          opts = {}
+          opts[:KVOp] = op
+          opts[:KVKey] = key
+
+          Oboe::API.trace('memcache', opts || {}) do
+            result = perform_without_oboe(*all_args, &blk)
+            if op == :get and key.class == String
+                Oboe::API.log('memcache', 'info', { :KVHit => memcache_hit?(result) })
+            end
+            result
+          end
+        else
+          perform_without_oboe(*all_args, &blk)
+        end
+      end
     end
+  end
+end
+```
 
 Second, we tail onto the end of the instrumentation file a simple `::Dalli::Client.module_eval` call to tell the Dalli module to include our newly defined instrumentation module.  Doing this will invoke our previously defined `included` method.
 
-    if defined?(Dalli) and Oboe::Config[:dalli][:enabled]
-      ::Dalli::Client.module_eval do
-        include Oboe::Inst::Dalli
-      end
-    end
+```ruby
+if defined?(Dalli) and Oboe::Config[:dalli][:enabled]
+  ::Dalli::Client.module_eval do
+    include Oboe::Inst::Dalli
+  end
+end
+```
 
 Third, in our wrapper method, we capture the arguments passed in, collect the operation and key information into a local hash and then invoke the `Oboe::API.trace` method to time the execution of the original operation.
 
@@ -248,9 +325,9 @@ Some other tips and guidelines:
 
 * If instrumenting a library, database or service, place your new instrumentation file into the `lib/oboe/inst/` directory.  From there, the oboe gem will detect it and automatically load the instrumentation file.
 
-* If instrumentating a new framework, place your instrumentation file in `lib/oboe/frameworks`.  Refer to the Rails instrumentation for on ideas on how to load the oboe gem correctly in your framework.
+* If instrumenting a new framework, place your instrumentation file in `lib/oboe/frameworks`.  Refer to the Rails instrumentation for on ideas on how to load the oboe gem correctly in your framework.
 
-* Review other existing instrumention similar to the one you wish to author.  `lib/oboe/inst/` is a great place to start.
+* Review other existing instrumentation similar to the one you wish to author.  `lib/oboe/inst/` is a great place to start.
 
 * Depending on the configured `:sample_rate`, not all requests will be traced.  Use `Oboe.tracing?` to determine of this is a request that is being traced.
 
@@ -262,21 +339,25 @@ Some other tips and guidelines:
 
 The oboe gem utilizes a C extension to interface with the system `liboboe.so` library.  This system library is installed with the TraceView host packages (tracelyzer, liboboe0, liboboe-dev) and is used to report [host](http://www.appneta.com/blog/app-host-metrics/) and performance metrics from multiple sources (Ruby, Apache, Python etc.) back to TraceView servers.
 
-C extensions are usually built on `gem install` but when working out of a local git repository, it's required that you manually build this C extension for the gem to function.  
+C extensions are usually built on `gem install` but when working out of a local git repository, it's required that you manually build this C extension for the gem to function.
 
 To make this simpler, we've included a few rake tasks to automate this process:
 
-    rake compile             # Build the gem's c extension
-    rake distclean           # Remove all built files and extensions
-    rake recompile           # Rebuild the gem's c extension
+```bash
+rake compile             # Build the gem's c extension
+rake distclean           # Remove all built files and extensions
+rake recompile           # Rebuild the gem's c extension
+```
 
 Note: Make sure you have the development package `liboboe0-dev` installed before attempting to compile the C extension.
 
-    >$ dpkg -l | grep liboboe
-    ii  liboboe-dev    1.1.1-precise1    Tracelytics common library -- development files
-    ii  liboboe0       1.1.1-precise1    Tracelytics common library
+```bash
+>$ dpkg -l | grep liboboe
+ii  liboboe-dev    1.1.1-precise1    Tracelytics common library -- development files
+ii  liboboe0       1.1.1-precise1    Tracelytics common library
+```
 
-See [Installing Base Packages on Debian and Ubuntu](https://support.tv.appneta.com/support/solutions/articles/86359-installing-base-packages-on-debian-and-ubuntu) in the Knowledge Base for details.  Our hacker extraodinaire [Rob Salmond](https://github.com/rsalmond) from the support team has even gotten these packages to [run on Gentoo](http://www.appneta.com/blog/unsupported-doesnt-work/)!
+See [Installing Base Packages on Debian and Ubuntu](https://support.appneta.com/cloud/installing-traceview) in the Knowledge Base for details.  Our hacker extraordinaire [Rob Salmond](https://github.com/rsalmond) from the support team has even gotten these packages to [run on Gentoo](http://www.appneta.com/blog/unsupported-doesnt-work/)!
 
 To see the code related to the C extension, take a look at `ext/oboe_metal/extconf.rb` for details.
 
@@ -288,21 +369,25 @@ The tests bundled with the gem are implemented using [Minitest](https://github.c
 
 After a bundle install, the tests can be run as:
 
-    bundle exec rake test
+```bash
+bundle exec rake test
+```
 
 This will run a full end-to-end test suite that covers all supported libraries and databases.  Note that this requires all of the supported software (Cassandra, Memcache, Mongo etc.) to be installed, configured and available.
 
-Since this is overly burdonsome for casual users, you can run just the tests that you're interested in.  
+Since this is overly burdensome for casual users, you can run just the tests that you're interested in.
 
 To run just the tests for the dalli gem trace validation:
 
-    bundle exec rake test TEST=test/instrumentation/dalli_test.rb
+```bash
+bundle exec rake test TEST=test/instrumentation/dalli_test.rb
+```
 
-We humbly request that any submitted instrumention is delivered with corresponding test coverage.
+We humbly request that any submitted instrumentation is delivered with corresponding test coverage.
 
 # License
 
-Copyright (c) 2013 Appneta
+Copyright (c) 2014 Appneta
 
 Released under the [AppNeta Open License](http://www.appneta.com/appneta-license), Version 1.0
 

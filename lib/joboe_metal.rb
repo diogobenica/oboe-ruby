@@ -1,7 +1,9 @@
 # Copyright (c) 2013 AppNeta, Inc.
 # All rights reserved.
 
-module Oboe_metal < MetalBase
+require 'base'
+
+module Oboe_metal
   include_package 'com.tracelytics.joboe'
   import 'com.tracelytics.joboe'
   include_package 'com.tracelytics.joboe.SettingsReader'
@@ -83,8 +85,8 @@ module Oboe_metal < MetalBase
 
         # Only report __Init from here if we are not instrumenting a framework.
         # Otherwise, frameworks will handle reporting __Init after full initialization
-        unless defined?(::Rails) or defined?(::Sinatra) or defined?(::Padrino)
-          Oboe::API.report_init('rack') unless ["development", "test"].include? ENV['RACK_ENV']
+        unless defined?(::Rails) or defined?(::Sinatra) or defined?(::Padrino) or defined?(::Grape)
+          Oboe::API.report_init
         end
       
       rescue Exception => e
